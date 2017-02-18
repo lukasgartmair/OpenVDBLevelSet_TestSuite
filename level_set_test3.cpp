@@ -9,6 +9,9 @@
 
 #include "../openvdb/openvdb/tools/Composite.h"
 
+#include "../openvdb/openvdb/tools/LevelSetFracture.h"
+
+#include <list>
 
 
 // compile sudo g++ -std=c++11 -I/usr/include/openvdb  TestRunner.cpp -lcppunit -lopenvdb -ltbb -lHalf -o RunTests
@@ -53,6 +56,10 @@ int main()
 
 	openvdb::FloatGrid::Ptr grid = openvdb::gridPtrCast<openvdb::FloatGrid>(basegrid);
 
+	float voxelsize = 1.0;
+
+	openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(voxelsize);
+
 	float minVal = 0.0;
 	float maxVal = 0.0;
 
@@ -65,21 +72,39 @@ int main()
 	// change the grid here to be extracted
 	openvdb::tools::volumeToMesh<openvdb::FloatGrid>(*grid, points, triangles, quads, isovalue, adaptivity);
 
+	float halfWidth = 10;
+
+	openvdb::FloatGrid::Ptr cutterGrid = openvdb::tools::meshToLevelSet<openvdb::FloatGrid>(*transform, points, quads, halfWidth);
+
 	std::cout << points.size() << std::endl;
 
+	// Setup fracture tool
+	openvdb::tools::LevelSetFracture<openvdb::FloatGrid> lsFracture;
+
+	bool segmentFragments=true;
+	bool cutterOverlap=true;
+
+	// Add the grid pointer to a container.
+	std::list<openvdb::FloatGrid::Ptr> grids;
+	grids.push_back(grid);
+
+	lsFracture.fracture(grids, *cutterGrid, segmentFragments, NULL, NULL, cutterOverlap);
+
+
+/*
 	const float bandwidth = 30;
 	const float in_bandwidth = 10;
 	const float ex_bandwidth = 10;
 
 	const double voxelsize = 1.0;
 
-	openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(voxelsize);
+	
 	openvdb::FloatGrid::Ptr sdf = openvdb::tools::meshToSignedDistanceField<openvdb::FloatGrid>(*transform, points, triangles, quads, ex_bandwidth, in_bandwidth);
 
-	//openvdb::FloatGrid::Ptr cutter = openvdb::tools::MeshToVolume::meshToLevelSet<openvdb::FloatGrid>(*transform, points, triangles, quads, ex_bandwidth, in_bandwidth);
-	//cutter->setTransform(openvdb::math::Transform::createLinearTransform(voxelsize));
+	openvdb::FloatGrid::Ptr cutter = openvdb::tools::meshToLevelSet<openvdb::FloatGrid>(*transform, points, triangles, quads, ex_bandwidth, in_bandwidth);
+	cutter->setTransform(openvdb::math::Transform::createLinearTransform(voxelsize));
 
-/*
+
 
 
 	openvdb::tools::LevelSetFracture::fracture(sdf,cutter); 	
@@ -96,7 +121,7 @@ int main()
 
 	file_out.write(grids_out);
 	file_out.close();
-*/
 
+*/
 }
 
